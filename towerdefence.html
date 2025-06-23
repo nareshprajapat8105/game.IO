@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tower Defense Game</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: #282c34;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: sans-serif;
+      color: white;
+    }
+    canvas {
+      background: #111;
+      border: 2px solid #fff;
+    }
+    h1 {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tower Defense</h1>
+  <canvas id="gameCanvas" width="600" height="400"></canvas>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const path = [
+      { x: 0, y: 180 },
+      { x: 150, y: 180 },
+      { x: 150, y: 50 },
+      { x: 450, y: 50 },
+      { x: 450, y: 300 },
+      { x: 600, y: 300 }
+    ];
+
+    class Enemy {
+      constructor() {
+        this.x = path[0].x;
+        this.y = path[0].y;
+        this.speed = 1;
+        this.pathIndex = 0;
+        this.size = 20;
+        this.health = 100;
+      }
+
+      move() {
+        const target = path[this.pathIndex + 1];
+        const dx = target.x - this.x;
+        const dy = target.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < this.speed) {
+          this.pathIndex++;
+          if (this.pathIndex >= path.length - 1) {
+            this.health = 0;
+          }
+        } else {
+          this.x += (dx / dist) * this.speed;
+          this.y += (dy / dist) * this.speed;
+        }
+      }
+
+      draw() {
+        ctx.fillStyle = "red";
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    class Tower {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.range = 100;
+        this.cooldown = 0;
+      }
+
+      draw() {
+        ctx.fillStyle = "blue";
+        ctx.fillRect(this.x - 10, this.y - 10, 20, 20);
+      }
+
+      shoot(enemy) {
+        if (this.cooldown === 0 && this.inRange(enemy)) {
+          bullets.push(new Bullet(this.x, this.y, enemy));
+          this.cooldown = 60;
+        } else if (this.cooldown > 0) {
+          this.cooldown--;
+        }
+      }
+
+      inRange(enemy) {
+        const dx = enemy.x - this.x;
+        const dy = enemy.y - this.y;
+        return Math.sqrt(dx * dx + dy * dy) <= this.range;
+      }
+    }
+
+    class Bullet {
+      constructor(x, y, target) {
+        this.x = x;
+        this.y = y;
+        this.target = target;
+        this.speed = 4;
+        this.size = 5;
+      }
+
+      move() {
+        const dx = this.target.x - this.x;
+        const dy = this.target.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < this.speed) {
+          this.target.health -= 20;
+          return true;
+        } else {
+          this.x += (dx / dist) * this.speed;
+          this.y += (dy / dist) * this.speed;
+          return false;
+        }
+      }
+
+      draw() {
+        ctx.fillStyle = "yellow";
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    const enemies = [];
+    const towers = [new Tower(200, 120), new Tower(300, 250)];
+    const bullets = [];
+
+    function drawPath() {
+      ctx.strokeStyle = "#444";
+      ctx.lineWidth = 10;
+      ctx.beginPath();
+      ctx.moveTo(path[0].x, path[0].y);
+      for (let i = 1; i < path.length; i++) {
+        ctx.lineTo(path[i].x, path[i].y);
+      }
+      ctx.stroke();
+    }
+
+    function updateGame() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawPath();
+
+      // Draw and update enemies
+      enemies.forEach((e, index) => {
+        e.move();
+        if (e.health <= 0) enemies.splice(index, 1);
+        else e.draw();
+      });
+
+      // Towers shoot
+      towers.forEach(tower => {
+        tower.draw();
+        enemies.forEach(enemy => tower.shoot(enemy));
+      });
+
+      // Move bullets
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        if (b.move()) bullets.splice(i, 1);
+        else b.draw();
+      }
+    }
+
+    setInterval(() => {
+      enemies.push(new Enemy());
+    }, 3000);
+
+    setInterval(updateGame, 30);
+  </script>
+</body>
+</html>
